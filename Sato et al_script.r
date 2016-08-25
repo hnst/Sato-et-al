@@ -7,7 +7,7 @@ TMR="_w2Cube 5_s";
 Dapi="_w1Cube 1_s";
 
 //mask with Dapi
-for(im=1; im<=5; im++) {
+for(im=1; im<=x; im++) {
     open(dir+baseName+Dapi+im+".tif");
     setAutoThreshold("Default dark");
     //run("Threshold...");
