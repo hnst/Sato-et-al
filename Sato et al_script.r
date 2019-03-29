@@ -292,27 +292,9 @@ bedtools sort -i RD0.bed > RD0s.bed
 
 
 ##Shuffle x100
-#make shuffle100kb.sh
-
-#!/bin/bash
-#$ -S /bin/bash
-#$ -V
-#$ -N sort
-#$ -j y
-#$ -cwd
-#$ -m e
-#$ -l h_vmem=100g
 module load bedtools2/2.24.0/gcc.4.4.7
 bedtools sort -i ~/chipseq2/female.hg19_500kbwin.bed > ~/chipseq2/female.hg19_500kbwins.bed
 
-#!/bin/bash
-#$ -S /bin/bash
-#$ -V
-#$ -N shuffle
-#$ -j y
-#$ -cwd
-#$ -m e
-#$ -l h_vmem=100g
 module load bedtools2/2.24.0/gcc.4.4.7
 echo "shuffle"
 bedtools shuffle -i RD0.bed -g genomehg19.txt -excl exclude500kb.bed -seed ${seed} > ~/chipseq2/500kb/RD${seed}.bed
@@ -430,7 +412,6 @@ box()
 axis(2, xaxp=c(0,1.5,4))
 
 
-
 #Take top windows
 G1tmp=dev500s[which(dev500s[,4]>1.440705),]
 G1=data.frame(G1tmp[,1:3],G1tmp[,4])
@@ -468,7 +449,7 @@ write.table(input500b,"~/Desktop/Shuffle/input500b.bed", sep="\t",row.names=F,co
 
 
 ##------>GO TO TERMINAL(1)
-scp -r ~/Desktop/Shuffle hsato@10.254.207.131:~/chipseq2/Shuffle
+scp -r ~/Desktop/Shuffle hsato@XX.XXX.XXX.XXX:~/chipseq2/Shuffle
 
 module load bedtools2/2.24.0/gcc.4.4.7
 bedtools intersect -wo -a ~/chipseq2/Shuffle/1.44_G1.bed -b ~/chipseq2/Shuffle/cytoBand.bed > G1band.bed
@@ -480,26 +461,16 @@ awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$9}' Sband.bed > Sband500.bed
 awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$9}' b500band.bed > band500.bed
 
 #make intersect.sh
-#!/bin/bash
-#$ -S /bin/bash
-#$ -V
-#$ -N intersect
-#$ -j y
-#$ -cwd
-#$ -m e
-#$ -l h_vmem=100g
 module load bedtools2/2.24.0/gcc.4.4.7
 bedtools intersect -wo -a ~/chipseq2/Shuffle/1.44_${seed}.bed -b ~/chipseq2/Shuffle/cytoBand.bed > 1.44_${seed}band.bed
 bedtools intersect -wo -a ~/chipseq2/Shuffle/1.4_${seed}.bed -b ~/chipseq2/Shuffle/cytoBand.bed > 1.4_${seed}band.bed
-
 
 for i in {1..100}; do qsub -v seed=$i intersect.sh; done
 
 ------->Go TO R(2)
 
 
-//data.einstein.yu.edu/users/Hanae Sato/chipseq2/500kb/
-
+//XXXXXX/users/Hanae Sato/chipseq2/500kb/
 
 G1_band <- read.delim(paste("/Volumes/files/Hanae Sato/chipseq2/Shuffle/G1band500.bed",sep=""), header=FALSE)
 band500 <- read.delim(paste("/Volumes/files/Hanae Sato/chipseq2/Shuffle/band500.bed",sep=""), header=FALSE)
@@ -513,11 +484,11 @@ tmp_band =  c(length(which(S_band[,5]=="gneg"))/length(which(band500[,5]=="gneg"
 band = cbind(band,tmp_band)
 
 ##get mean number of coloumn in Shuffle 100x files
-RD <- read.delim(paste("//data.einstein.yu.edu/users/Hanae Sato/chipseq2/Shuffle/1.44_1.bed",sep=""), header=FALSE)
+RD <- read.delim(paste("//XXXXXX/users/Hanae Sato/chipseq2/Shuffle/1.44_1.bed",sep=""), header=FALSE)
 row=length(RD[,1])
 for (i in 2:100){
     print(i)
-    tmp_row <- read.delim(paste("//data.einstein.yu.edu/users/Hanae Sato/chipseq2/Shuffle/1.44_",i,".bed",sep=""), header=FALSE)
+    tmp_row <- read.delim(paste("//XXXXXX/users/Hanae Sato/chipseq2/Shuffle/1.44_",i,".bed",sep=""), header=FALSE)
     tmp1 = length(tmp_row[,1])
     row = cbind(row,tmp1)
 }
@@ -580,5 +551,177 @@ bedtools coverage -a ~/chipseq2/Shuffle/1.44_G1.bed -b ~/chipseq2/Shuffle/1.4_S.
 bedtools coverage -a ~/chipseq2/Shuffle/1.44_G1.bed -b ~/chipseq2/Shuffle/1.44_1.bed > ~/chipseq2/G1in1.bed -sorted
 
 awk '{if ($5==1) print}' G1inS.bed |wc -l
-810
 awk '{if ($5==1) print}' G1in1.bed |wc -l
+
+
+#Get number of windows in each Giemsa bands
+options(stringsAsFactors=F)
+cyto=read.table("/####/cytoBand.bed")
+S=read.table("/####/1.4_S.bed") 
+G=read.table("/####/1.44_G1.bed")
+female=read.table("/####/female.hg19_500kbwin.bed")
+
+#intersect function 
+bedTools.2in<-function(functionstring="/usr/local/bin/intersectBed",bed1,bed2,opt.string="")
+{
+  #create temp files
+  a.file=tempfile()
+  b.file=tempfile()
+  out   =tempfile()
+  options(scipen =99) # not to use scientific notation when writing out
+  
+  #write bed formatted dataframes to tempfile
+  write.table(bed1,file=a.file,quote=F,sep="\t",col.names=F,row.names=F)
+  write.table(bed2,file=b.file,quote=F,sep="\t",col.names=F,row.names=F)
+  
+  # create the command string and call the command using system()
+  command=paste(functionstring,"-a",a.file,"-b",b.file,opt.string,">",out,sep=" ")
+  cat(command,"\n")
+  try(system(command))
+  
+  res=read.table(out,header=F)
+  unlink(a.file);unlink(b.file);unlink(out)
+  return(res)
+}
+
+
+#
+
+S=data.frame(S,c(1:nrow(S)))
+G=data.frame(G,c(1:nrow(G)))
+female=data.frame(female,c(1:nrow(female)))
+
+over_S=bedTools.2in(bed1=cyto,bed2=S,opt.string="-wo")
+over_G=bedTools.2in(bed1=cyto,bed2=G,opt.string="-wo")
+over_F=bedTools.2in(bed1=cyto,bed2=female,opt.string="-wo")
+
+split_S=split(over_S,over_S[,10])
+split_G=split(over_G,over_G[,10])
+split_F=split(over_F,over_F[,9])
+
+len_S=c("NA",length(split_S))
+len_G=c("NA",length(split_G))
+len_F=c("NA",length(split_F))
+
+for(i in c(1:length(split_S))){len_S[i]=nrow(split_S[[i]])}
+
+final=lapply(split_S,function(x) {
+  if (nrow(x)==1){
+    z=x 
+  }else{
+    #z=x[order(-x[,11]),]
+    z=x[order(-x[,10]),]
+    z=z[1,]
+  }
+  return(z)
+})
+
+final_S=do.call(rbind,final)
+colnames(final_S)=c("chr_cyto","start_cyto","stop_cyto","position","g_status","chr_peak","start_peak","stop_peak","peak_score","peak_ID","bp_overlap")
+
+colnames(final_S)=c("chr_cyto","start_cyto","stop_cyto","position","g_status","chr_peak","start_peak","stop_peak","peak_ID","bp_overlap")
+
+write.table(final_S,"/Volumes/home/greally-lab/Fabien_Hana/overlap_unique_cyto_1.4S.txt",sep="\t",col.names=T,row.names=F,quote=F)
+
+write.table(final_S,"/####/overlap_unique_cyto_female.txt",sep="\t",col.names=T,row.names=F,quote=F)
+
+table(final_S[,5])
+##########number of overlap for 1.4_S##################
+acen    gneg gpos100  gpos25  gpos50  gpos75    gvar 
+6     159     451       5      34     168       7 
+
+#######################################################
+
+
+final=lapply(split_G,function(x) {
+  if (nrow(x)==1){
+    z=x 
+  }else{
+    z=x[order(-x[,11]),]
+    z=z[1,]
+  }
+  return(z)
+})
+
+final_G=do.call(rbind,final)
+colnames(final_G)=c("chr_cyto","start_cyto","stop_cyto","position","g_status","chr_peak","start_peak","stop_peak","peak_score","peak_ID","bp_overlap")
+
+write.table(final_G,"/####/overlap_unique_cyto_1.44_G1.txt",sep="\t",col.names=T,row.names=F,quote=F)
+
+table(final_G[,5])
+##########number of overlap for 1.44_G1##################
+acen    gneg gpos100  gpos25  gpos50  gpos75    gvar 
+9     179     526       9      51     196       7
+
+#########################################################
+
+final=lapply(split_F,function(x) {
+  if (nrow(x)==1){
+    z=x 
+  }else{
+    z=x[order(-x[,11]),]
+    z=z[1,]
+  }
+  return(z)
+})
+
+final_F=do.call(rbind,final)
+colnames(final_F)=c("chr_cyto","start_cyto","stop_cyto","position","g_status","chr_peak","start_peak","stop_peak","peak_score","peak_ID","bp_overlap")
+
+write.table(final_F,"/####/overlap_unique_cyto_female.txt",sep="\t",col.names=T,row.names=F,quote=F)
+
+table(final_F[,5])
+##########number of overlap for female##################
+acen    gneg gpos100  gpos25  gpos50  gpos75    gvar   stalk 
+223    2547    1004     420     818     810     181      39 
+#######################################################
+
+
+#Make Pie chart for the windows in Giemsa bands in R
+s<- c(451,168,34,5,159,13)
+g1<- c(526,196,51,9,179,16)
+genome<- c(1004,810,818,420,2547,223)
+
+lbls <-c("gpos100","gpos75","gpos50","gpos25","gneg", "Others")
+spct <- round(s/sum(s)*100)
+g1pct <- round(g1/sum(g1)*100)
+gepct <- round(genome/sum(genome)*100)
+
+slbls <- paste(lbls,"_", spct,"%",sep="")
+g1lbls <- paste(lbls,"_", g1pct,"%",sep="")
+gelbls <- paste(lbls,"_", gepct,"%",sep="")
+
+colors=c("gray10", "gray30", "gray50", "gray70", "white", "ivory2")
+pie(s,labels = slbls, clockwise = TRUE, col=colors, border = "gray40",main="S-G2")
+pie(g1,labels = g1lbls, clockwise = TRUE, col=colors, border = "gray40",main="G1")
+pie(genome,labels = gelbls, clockwise = TRUE, col=colors, border = "gray40",main="Genome")
+
+
+#make mH2A enrichment visualization in genome using "Quatsmooth"
+library(SparseM)
+library(quantreg)
+library(grid)
+library("quantsmooth")
+load(example_loci.RData)
+genome = data.frame(CHR=loci[,1],MapInfo=loci[,2])
+par(mfrow=c(1,1), mar=c(1,5,1,1) )
+
+G1 <- read.delim("Z:/Hanae Sato/chipseq/1.44_G1.bed", header=FALSE)
+S <- read.delim("Z:/Hanae Sato/chipseq/1.4_S.bed", header=FALSE)
+x1=gsub("chr","",G1[,1])
+posG1=data.frame(x,G1[,2])
+x2=gsub("chr","",S[,1])
+posS=data.frame(x2,S[,2])
+mH2A_G1 = data.frame(CHR=posG1[,1],MapInfo=posG1[,2])
+mH2A_S = data.frame(CHR=posS[,1],MapInfo=posS[,2])
+par(mfrow=c(1,1), mar=c(1,5,1,1) )
+chrompos_G1 = prepareGenomePlot(mH2A_G1, paintCytobands=TRUE, organism="hsa",units="hg19", sexChromosomes=TRUE)
+chrompos_S = prepareGenomePlot(mH2A_S, paintCytobands=TRUE, organism="hsa",units="hg19", sexChromosomes=TRUE)
+points(chrompos_G1[,2], jitter(chrompos_G1[,1]+0.3,factor=0.2), pch=".", col="blue", lwd=1 )
+points(chrompos_S[,2], jitter(chrompos_S[,1]+0.15,factor=0.2), pch=".", col="red", lwd=1 )
+
+#convert bed to bedgraph
+module load bedtools2/2.24.0/gcc.4.4.7
+bedtools genomecov -i ~/chipseq/NOC_127m.bed -g ~/chipseq/female.hg19.fasta.fai -bg  > ~/chipseq/bedgraph/NOC_127m.bedgraph
+bedtools genomecov -i ~/chipseq/TH_127m.bed -g ~/chipseq/female.hg19.fasta.fai  -bg  > ~/chipseq/bedgraph/TH_127m.bedgraph
+bedtools genomecov -i ~/chipseq/input_127m.bed -g ~/chipseq/female.hg19.fasta.fai -bg  > ~/chipseq/bedgraph/input_127m.bedgraph
